@@ -2,6 +2,232 @@
 Local tools used by the LangChain controller — no GPU call involved.
 """
 
+# from typing import Dict, Optional
+# import pandas as pd
+# import requests
+
+# # ---- Visa tool --------------------------------------------------------------
+
+# VISA_LABELS = {
+#     "visa free": "Visa-free entry (no fixed duration in the data — e.g. freedom of "
+#                  "movement, tourist registration, e-ticket, or arrival-card countries).",
+#     "visa on arrival": "Visa on arrival — effectively visa-free.",
+#     "eta": "Electronic Travel Authorisation (ETA/ESTA/eVisitor) required before travel.",
+#     "e-visa": "Electronic visa (e-Visa) required before travel.",
+#     "visa required": "A standard visa is required before travel.",
+#     "no admission": "Entry is not permitted (active travel ban or restricted destination).",
+# }
+
+
+# def load_visa_matrix(csv_path: str) -> pd.DataFrame:
+#     """CSV layout: first column ('Passport') = departure/passport country (row index),
+#     remaining column headers = destination countries."""
+#     return pd.read_csv(csv_path, index_col=0)
+
+
+# def check_visa(df: pd.DataFrame, departure: str, destination: str) -> Dict:
+#     if departure not in df.index:
+#         raise ValueError(f"Departure country '{departure}' not found in CSV rows")
+#     if destination not in df.columns:
+#         raise ValueError(f"Destination country '{destination}' not found in CSV columns")
+
+#     raw = df.loc[departure, destination]
+#     raw_str = str(raw).strip().lower()
+
+#     if raw_str == "-1":
+#         return {
+#             "status": "same_country",
+#             "days": None,
+#             "message": "Departure and destination are the same country — no visa needed.",
+#         }
+#     if raw_str.replace(".", "", 1).isdigit():
+#         days = int(float(raw_str))
+#         return {
+#             "status": "visa_free",
+#             "days": days,
+#             "message": f"Visa-free for up to {days} days.",
+#         }
+#     if raw_str in VISA_LABELS:
+#         return {
+#             "status": raw_str.replace(" ", "_"),
+#             "days": None,
+#             "message": VISA_LABELS[raw_str],
+#         }
+#     return {"status": "unknown", "days": None, "message": f"Unrecognized CSV value: {raw}"}
+
+
+# # ---- Weather tool -------------------------------------------------------------
+# # Uses Open-Meteo (no API key required). Note: the free forecast endpoint only
+# # covers roughly the next 16 days — for trips further out, treat this as
+# # indicative rather than precise, or swap in a climate-normals API.
+
+# def get_coordinates(place_name: str):
+#     resp = requests.get(
+#         "https://geocoding-api.open-meteo.com/v1/search",
+#         params={"name": place_name, "count": 1},
+#         timeout=15,
+#     )
+#     resp.raise_for_status()
+#     results = resp.json().get("results")
+#     if not results:
+#         raise ValueError(f"Could not geocode '{place_name}'")
+#     r = results[0]
+#     return r["latitude"], r["longitude"]
+
+
+# def get_weather_forecast(place_name: str, start_date: str, end_date: str) -> Optional[Dict]:
+#     lat, lon = get_coordinates(place_name)
+#     resp = requests.get(
+#         "https://api.open-meteo.com/v1/forecast",
+#         params={
+#             "latitude": lat,
+#             "longitude": lon,
+#             "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+#             "timezone": "auto",
+#             "start_date": start_date,
+#             "end_date": end_date,
+#         },
+#         timeout=15,
+#     )
+#     resp.raise_for_status()
+#     return resp.json()
+# """
+# Local tools used by the LangChain controller — no GPU call involved.
+# """
+
+# from typing import Dict, Optional
+# import pandas as pd
+# import requests
+
+# # ---- Visa tool --------------------------------------------------------------
+
+# VISA_LABELS = {
+#     "visa free": "Visa-free entry (no fixed duration in the data — e.g. freedom of "
+#                  "movement, tourist registration, e-ticket, or arrival-card countries).",
+#     "visa on arrival": "Visa on arrival — effectively visa-free.",
+#     "eta": "Electronic Travel Authorisation (ETA/ESTA/eVisitor) required before travel.",
+#     "e-visa": "Electronic visa (e-Visa) required before travel.",
+#     "visa required": "A standard visa is required before travel.",
+#     "no admission": "Entry is not permitted (active travel ban or restricted destination).",
+# }
+
+
+# def load_visa_matrix(csv_path: str) -> pd.DataFrame:
+#     """CSV layout: first column ('Passport') = departure/passport country (row index),
+#     remaining column headers = destination countries."""
+#     return pd.read_csv(csv_path, index_col=0)
+
+
+# def check_visa(df: pd.DataFrame, departure: str, destination: str) -> Dict:
+#     if departure not in df.index:
+#         raise ValueError(f"Departure country '{departure}' not found in CSV rows")
+#     if destination not in df.columns:
+#         raise ValueError(f"Destination country '{destination}' not found in CSV columns")
+
+#     raw = df.loc[departure, destination]
+#     raw_str = str(raw).strip().lower()
+
+#     if raw_str == "-1":
+#         return {
+#             "status": "same_country",
+#             "days": None,
+#             "message": "Departure and destination are the same country — no visa needed.",
+#         }
+#     if raw_str.replace(".", "", 1).isdigit():
+#         days = int(float(raw_str))
+#         return {
+#             "status": "visa_free",
+#             "days": days,
+#             "message": f"Visa-free for up to {days} days.",
+#         }
+#     if raw_str in VISA_LABELS:
+#         return {
+#             "status": raw_str.replace(" ", "_"),
+#             "days": None,
+#             "message": VISA_LABELS[raw_str],
+#         }
+#     return {"status": "unknown", "days": None, "message": f"Unrecognized CSV value: {raw}"}
+
+
+# # ---- Weather tool -------------------------------------------------------------
+# # Uses Open-Meteo (no API key required).
+# #
+# # The free forecast endpoint only covers roughly the next 16 days. If the
+# # trip is further out than that, we fall back to the historical archive and
+# # pull the same calendar dates from last year as a rough stand-in for what
+# # the weather is typically like — clearly flagged as an estimate, not a
+# # forecast.
+
+# FORECAST_HORIZON_DAYS = 16
+
+
+# def get_coordinates(place_name: str):
+#     resp = requests.get(
+#         "https://geocoding-api.open-meteo.com/v1/search",
+#         params={"name": place_name, "count": 1},
+#         timeout=15,
+#     )
+#     resp.raise_for_status()
+#     results = resp.json().get("results")
+#     if not results:
+#         raise ValueError(f"Could not geocode '{place_name}'")
+#     r = results[0]
+#     return r["latitude"], r["longitude"]
+
+
+# def get_weather_forecast(place_name: str, start_date: str, end_date: str) -> Optional[Dict]:
+#     import datetime as _dt
+
+#     lat, lon = get_coordinates(place_name)
+
+#     start = _dt.date.fromisoformat(start_date)
+#     end = _dt.date.fromisoformat(end_date)
+#     today = _dt.date.today()
+#     days_out = (end - today).days
+
+#     if days_out <= FORECAST_HORIZON_DAYS:
+#         # Within range: use the live forecast.
+#         resp = requests.get(
+#             "https://api.open-meteo.com/v1/forecast",
+#             params={
+#                 "latitude": lat,
+#                 "longitude": lon,
+#                 "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+#                 "timezone": "auto",
+#                 "start_date": start_date,
+#                 "end_date": end_date,
+#             },
+#             timeout=15,
+#         )
+#         resp.raise_for_status()
+#         data = resp.json()
+#         data["_source"] = "forecast"
+#         return data
+
+#     # Too far out for a live forecast: use the same dates from last year
+#     # as an estimate of typical conditions.
+#     last_year_start = start.replace(year=start.year - 1)
+#     last_year_end = end.replace(year=end.year - 1)
+#     resp = requests.get(
+#         "https://archive-api.open-meteo.com/v1/archive",
+#         params={
+#             "latitude": lat,
+#             "longitude": lon,
+#             "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+#             "timezone": "auto",
+#             "start_date": last_year_start.isoformat(),
+#             "end_date": last_year_end.isoformat(),
+#         },
+#         timeout=15,
+#     )
+#     resp.raise_for_status()
+#     data = resp.json()
+#     data["_source"] = "historical_estimate"
+#     return data
+"""
+Local tools used by the LangChain controller — no GPU call involved.
+"""
+
 from typing import Dict, Optional
 import pandas as pd
 import requests
@@ -57,9 +283,16 @@ def check_visa(df: pd.DataFrame, departure: str, destination: str) -> Dict:
 
 
 # ---- Weather tool -------------------------------------------------------------
-# Uses Open-Meteo (no API key required). Note: the free forecast endpoint only
-# covers roughly the next 16 days — for trips further out, treat this as
-# indicative rather than precise, or swap in a climate-normals API.
+# Uses Open-Meteo (no API key required).
+#
+# The free forecast endpoint only covers roughly the next 16 days. If the
+# trip is further out than that, we fall back to the historical archive and
+# pull the same calendar dates from last year as a rough stand-in for what
+# the weather is typically like — clearly flagged as an estimate, not a
+# forecast.
+
+FORECAST_HORIZON_DAYS = 16
+
 
 def get_coordinates(place_name: str):
     resp = requests.get(
@@ -75,19 +308,68 @@ def get_coordinates(place_name: str):
     return r["latitude"], r["longitude"]
 
 
+def _safe_avg(values) -> Optional[float]:
+    clean = [v for v in (values or []) if v is not None]
+    return sum(clean) / len(clean) if clean else None
+
+
 def get_weather_forecast(place_name: str, start_date: str, end_date: str) -> Optional[Dict]:
+    import datetime as _dt
+
     lat, lon = get_coordinates(place_name)
+
+    start = _dt.date.fromisoformat(start_date)
+    end = _dt.date.fromisoformat(end_date)
+    today = _dt.date.today()
+    days_out = (end - today).days
+
+    if days_out <= FORECAST_HORIZON_DAYS:
+        # Within range: use the live forecast, which has rain *probability*.
+        resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+                "timezone": "auto",
+                "start_date": start_date,
+                "end_date": end_date,
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        daily = resp.json().get("daily", {})
+        return {
+            "source": "forecast",
+            "avg_high": _safe_avg(daily.get("temperature_2m_max")),
+            "avg_low": _safe_avg(daily.get("temperature_2m_min")),
+            "avg_rain_probability_pct": _safe_avg(daily.get("precipitation_probability_max")),
+            "avg_rain_mm": None,
+        }
+
+    # Too far out for a live forecast: use the same dates from last year.
+    # The historical archive doesn't have rain *probability*, only actual
+    # rainfall amounts, so we report avg mm/day instead.
+    last_year_start = start.replace(year=start.year - 1)
+    last_year_end = end.replace(year=end.year - 1)
     resp = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
+        "https://archive-api.open-meteo.com/v1/archive",
         params={
             "latitude": lat,
             "longitude": lon,
-            "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+            "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
             "timezone": "auto",
-            "start_date": start_date,
-            "end_date": end_date,
+            "start_date": last_year_start.isoformat(),
+            "end_date": last_year_end.isoformat(),
         },
         timeout=15,
     )
     resp.raise_for_status()
-    return resp.json()
+    daily = resp.json().get("daily", {})
+    return {
+        "source": "historical_estimate",
+        "avg_high": _safe_avg(daily.get("temperature_2m_max")),
+        "avg_low": _safe_avg(daily.get("temperature_2m_min")),
+        "avg_rain_probability_pct": None,
+        "avg_rain_mm": _safe_avg(daily.get("precipitation_sum")),
+    }
