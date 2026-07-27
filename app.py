@@ -310,36 +310,43 @@ import base64
  
 from Tools import load_visa_matrix, check_visa, get_weather_forecast
 from llm_client import RemoteMistralLLM, build_travel_report, summarize_weather
- 
+from PIL import Image
+import os
+
+
 # 1. Page config MUST be the first Streamlit command
 st.set_page_config(page_title="Travel Assistant", page_icon="🧳", layout="centered")
 def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
 img_base64 = get_base64_image("OIP.webp")
-# 2. Modern UI Custom CSS
-# -> Change the 'background-image' URL to your own image
-# -> Change 'filter: blur(8px);' to increase or decrease the blur
-# page_bg_css = """
+
+# page_bg_css = f"""
 # <style>
-# /* Background Image with Blur */
-# .stApp::before {
+# /* 1. Make the default Streamlit backgrounds transparent */
+# [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+#     background-color: transparent !important;
+# }}
+
+# /* 2. Set the blurred background image */
+# [data-testid="stAppViewContainer"]::before {{
 #     content: "";
 #     position: fixed;
 #     top: 0;
 #     left: 0;
 #     width: 100vw;
 #     height: 100vh;
-#     background-image: url("data:image/webp;base64,{img_base64}"); 
+#     background-image: url("data:image/webp;base64,{img_base64}");
+#     background-size: cover;
 #     background-position: center;
 #     background-repeat: no-repeat;
-#     filter: blur(8px); /* <-- CONTROLS THE BLUR AMOUNT */
+#     filter: blur(8px); /* Adjust blur here */
 #     z-index: -1;
-# }
+# }}
 
-# /* Glassmorphism container for readability */
-# .block-container {
-#     background-color: rgba(255, 255, 255, 0.85); /* Semi-transparent white */
+# /* 3. Glassmorphism card container (so text is readable) */
+# .block-container {{
+#     background-color: rgba(255, 255, 255, 0.85);
 #     border-radius: 16px;
 #     padding: 2.5rem !important;
 #     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
@@ -347,10 +354,10 @@ img_base64 = get_base64_image("OIP.webp")
 #     border: 1px solid rgba(255, 255, 255, 0.18);
 #     margin-top: 2rem;
 #     margin-bottom: 2rem;
-# }
+# }}
 
-# /* Modern Gradient Button */
-# div.stButton > button {
+# /* 4. Modern Gradient Button */
+# div.stButton > button {{
 #     background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
 #     color: white;
 #     border: none;
@@ -359,110 +366,315 @@ img_base64 = get_base64_image("OIP.webp")
 #     font-weight: 600;
 #     transition: all 0.3s ease;
 #     width: 100%;
-# }
-# div.stButton > button:hover {
+# }}
+# div.stButton > button:hover {{
 #     transform: translateY(-2px);
 #     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
 #     color: white;
 #     border: none;
-# }
+# }}
 
-# /* Softer borders for inputs */
+# /* 5. Input styling */
 # .stTextInput>div>div>input, 
 # .stSelectbox>div>div>div, 
 # .stNumberInput>div>div>input, 
-# .stDateInput>div>div>input {
+# .stDateInput>div>div>input {{
 #     border-radius: 8px;
 #     border: 1px solid #CBD5E1;
-# }
+# }}
 # .stTextInput>div>div>input:focus, 
-# .stSelectbox>div>div>div:focus {
+# .stSelectbox>div>div>div:focus {{
 #     border-color: #4F46E5;
 #     box-shadow: 0 0 0 1px #4F46E5;
-# }
+# }}
 
-# /* Ensure text stays dark on the light glass background */
-# h1, h2, h3, p, .stMarkdown {
+# /* 6. Dark text for legibility */
+# h1, h2, h3, p, .stMarkdown {{
 #     color: #1E293B !important; 
-# }
+# }}
 # </style>
 # """
+
+# st.markdown(page_bg_css, unsafe_allow_html=True)
+# page_bg_css = f"""
+# <style>
+
+# /* Background image layer */
+# #bg-image {{
+#     position: fixed;
+#     top: 0;
+#     left: 0;
+#     width: 100vw;
+#     height: 100vh;
+
+#     background-image: url("data:image/webp;base64,{img_base64}");
+#     background-size: cover;
+#     background-position: center;
+#     background-repeat: no-repeat;
+
+#     filter: blur(3px);
+#     transform: scale(1.08);
+
+#     z-index: -9999;
+# }}
+
+# /* Dark overlay */
+# #bg-overlay {{
+#     position: fixed;
+#     inset: 0;
+#     background: rgba(0,0,0,0.5);
+#     z-index: -9998;
+# }}
+
+# /* Make Streamlit transparent */
+# .stApp,
+# [data-testid="stAppViewContainer"],
+# [data-testid="stHeader"] {{
+#     background: transparent !important;
+# }}
+
+# /* Glass container */
+# .block-container {{
+#     background: rgba(255,255,255,0.85);
+#     border-radius: 16px;
+#     padding: 2.5rem !important;
+#     backdrop-filter: blur(10px);
+#     border: 1px solid rgba(255,255,255,0.2);
+#     box-shadow: 0 8px 32px rgba(31,38,135,0.15);
+#     margin-top: 2rem;
+#     margin-bottom: 2rem;
+# }}
+
+# /* Buttons */
+# div.stButton > button {{
+#     background: linear-gradient(135deg,#4F46E5,#7C3AED);
+#     color: white;
+#     border: none;
+#     border-radius: 8px;
+#     width: 100%;
+# }}
+
+# div.stButton > button:hover {{
+#     transform: translateY(-2px);
+#     box-shadow: 0 4px 12px rgba(124,58,237,.4);
+# }}
+
+# /* Inputs */
+# .stTextInput>div>div>input,
+# .stSelectbox>div>div>div,
+# .stNumberInput>div>div>input,
+# .stDateInput>div>div>input {{
+#     border-radius:8px;
+#     border:1px solid #CBD5E1;
+# }}
+
+# h1,h2,h3,p,.stMarkdown {{
+#    color: white !important;
+#     text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+#     }}
+
+# </style>
+
+# <div id="bg-image"></div>
+# <div id="bg-overlay"></div>
+# """
+
+# st.markdown(page_bg_css, unsafe_allow_html=True)
 page_bg_css = f"""
 <style>
-/* 1. Make the default Streamlit backgrounds transparent */
-[data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
-    background-color: transparent !important;
-}}
 
-/* 2. Set the blurred background image */
-[data-testid="stAppViewContainer"]::before {{
-    content: "";
+/* ============================= */
+/* Full Screen Background */
+/* ============================= */
+
+#bg-image {{
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
+
     background-image: url("data:image/webp;base64,{img_base64}");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    filter: blur(8px); /* Adjust blur here */
-    z-index: -1;
+
+    filter: blur(4px);
+    transform: scale(1.06);
+
+    z-index: -1000;
 }}
 
-/* 3. Glassmorphism card container (so text is readable) */
+/* Dark overlay for readability */
+#bg-overlay {{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: -999;
+}}
+
+/* ============================= */
+/* Make Streamlit Transparent */
+/* ============================= */
+
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stHeader"] {{
+    background: transparent !important;
+}}
+
+[data-testid="stToolbar"] {{
+    background: transparent !important;
+}}
+
+/* ============================= */
+/* Main Glass Container */
+/* ============================= */
+
 .block-container {{
-    background-color: rgba(255, 255, 255, 0.85);
-    border-radius: 16px;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 22px;
+
     padding: 2.5rem !important;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+
     margin-top: 2rem;
     margin-bottom: 2rem;
 }}
 
-/* 4. Modern Gradient Button */
+/* ============================= */
+/* Sidebar */
+/* ============================= */
+
+[data-testid="stSidebar"] {{
+    background: rgba(25,25,25,.60);
+    backdrop-filter: blur(15px);
+}}
+
+[data-testid="stSidebar"] * {{
+    color: white !important;
+}}
+
+/* ============================= */
+/* Title */
+/* ============================= */
+
+h1 {{
+    color: white !important;
+    font-size: 3rem !important;
+    font-weight: 800 !important;
+
+    text-shadow:
+        2px 2px 10px rgba(0,0,0,.7);
+}}
+
+h2, h3 {{
+    color: white !important;
+    text-shadow: 2px 2px 8px rgba(0,0,0,.7);
+}}
+
+/* ============================= */
+/* Labels */
+/* ============================= */
+
+label,
+.stMarkdown,
+p,
+small,
+span {{
+    color: white !important;
+}}
+
+label {{
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+}}
+
+/* ============================= */
+/* Inputs */
+/* ============================= */
+
+.stTextInput input,
+.stNumberInput input,
+.stDateInput input {{
+    background: rgba(255,255,255,.92) !important;
+    color: #1e293b !important;
+
+    border-radius: 12px !important;
+    border: none !important;
+}}
+
+.stSelectbox div[data-baseweb="select"] {{
+    background: rgba(255,255,255,.92) !important;
+    border-radius: 12px !important;
+}}
+
+/* ============================= */
+/* Buttons */
+/* ============================= */
+
 div.stButton > button {{
-    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-    color: white;
+
+    background: linear-gradient(
+        135deg,
+        #4F46E5,
+        #7C3AED
+    );
+
+    color: white !important;
+
     border: none;
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
+
+    border-radius: 12px;
+
+    font-weight: 700;
+
+    padding: .65rem;
+
+    transition: .3s;
+
     width: 100%;
 }}
+
 div.stButton > button:hover {{
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
-    color: white;
-    border: none;
+
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 8px 22px rgba(124,58,237,.45);
+
+    color: white !important;
 }}
 
-/* 5. Input styling */
-.stTextInput>div>div>input, 
-.stSelectbox>div>div>div, 
-.stNumberInput>div>div>input, 
-.stDateInput>div>div>input {{
-    border-radius: 8px;
-    border: 1px solid #CBD5E1;
-}}
-.stTextInput>div>div>input:focus, 
-.stSelectbox>div>div>div:focus {{
-    border-color: #4F46E5;
-    box-shadow: 0 0 0 1px #4F46E5;
+/* ============================= */
+/* Success / Info Boxes */
+/* ============================= */
+
+.stAlert {{
+    border-radius: 14px;
 }}
 
-/* 6. Dark text for legibility */
-h1, h2, h3, p, .stMarkdown {{
-    color: #1E293B !important; 
+/* ============================= */
+/* Remove Top Padding */
+/* ============================= */
+
+.block-container {{
+    padding-top: 2rem !important;
 }}
+
+/* ============================= */
+/* Background HTML */
+/* ============================= */
+
 </style>
+
+<div id="bg-image"></div>
+<div id="bg-overlay"></div>
 """
 
 st.markdown(page_bg_css, unsafe_allow_html=True)
-
 st.title("🧳 Travel Assistant")
  
 # ---- sidebar: connection to the Kaggle backend --------------------------
@@ -533,3 +745,5 @@ if st.button("Generate travel report"):
  
     st.subheader("🎒 What to prepare / bring")
     st.write(report["checklist"] or "_The model returned an empty response for this step — try regenerating._")
+
+ 
