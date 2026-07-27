@@ -506,7 +506,7 @@ page_bg_css = f"""
 #bg-overlay {{
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.35);
+    background: rgba(0,0,0,0.60);
     z-index: -999;
 }}
 
