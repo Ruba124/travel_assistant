@@ -3,6 +3,11 @@
 <img width="1280" height="639" alt="photo_2026-07-28_22-53-01" src="https://github.com/user-attachments/assets/0775c00d-f416-43d7-9949-7f880d322726" />
 
 
+https://github.com/user-attachments/assets/d3e45975-52fe-410c-94f8-6b77e1f11f95
+
+
+
+
 # AI Travel Assistant
 
 An intelligent travel planning application designed to eliminate trip-planning friction by automating itineraries, verifying visa requirements, and providing weather-informed packing guides.
